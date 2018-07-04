@@ -17,7 +17,7 @@ from utils.parameters import varin
 from utils.utilFunctions import smooth_obs
 from utils.peakDetection import findPeak
 from pitchDetection.mfshs import MFSHS
-from dataFunction import saveJson,draw_result,parse_musescore
+from dataFunction import saveJson,draw_result,parse_musescore,pitch_Note
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -56,7 +56,10 @@ def _main(wav_file):
 	resultOnset = findPeak(obs_syllable,frequency,pitches,onset_frame)
 
 	filename = './data/test.json'
-	saveJson(filename,pitches,resultOnset['onset_frame'])
+	std_filename = './data/audio1/test_midi.txt'
+	result_info = saveJson(filename,pitches,resultOnset['onset_frame'])
+	#draw_result(std_filename,pitches,resultOnset['onset_frame'])
+	notes = pitch_Note(result_info)
 	print  resultOnset
 
 

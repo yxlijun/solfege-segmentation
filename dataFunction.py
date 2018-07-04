@@ -4,21 +4,45 @@ import json
 import numpy as np 
 import matplotlib 
 import matplotlib.pyplot as plt
-
+from utils.parameters import hopsize_t
+from utils.utilFunctions import flag_pause
 
 
 def saveJson(filename,pitches,onset_frame):
-	pitch_dict = {}
+	result_info = []
 	offset_frame = onset_frame[1:]
-	offset_frame = np.append(offset_frame,(onset_frame[-1]+60))
+	offset_frame = np.append(offset_frame,len(pitches)-1)
 	for idx,cur_onset_frame in enumerate(onset_frame):
+		pitch_info = {}
 		cur_offset_frame = offset_frame[idx]
 		pitch = pitches[cur_onset_frame:cur_offset_frame].tolist()
-		pitch_dict[idx] = pitch
+		pitch_info['pitches'] = pitch
+		pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
+		flag = flag_pause(pitch)
+		pitch_info['flag'] = flag
+		result_info.append(pitch_info)
+		
 
 	with open(filename,'w') as f:
-		json.dump(pitch_dict,f)
+		json.dump(result_info,f)
 
+	return result_info
+
+
+def pitch_Note(result_info):
+	det_pitches = []
+	for _info in result_info:
+		loc_flag = _info['flag']
+		pitches = np.array(_info['pitches'][:loc_flag],dtype=int)
+		pitches = pitches[np.where(pitches>20)[0]]
+		unique_pitch = np.unique(pitches)
+		number_dict = {}
+		for _det in unique_pitch:
+			count = pitches.tolist().count(_det)
+			number_dict[_det] = count
+		max_index = np.argmax(np.array(number_dict.values()))
+		det_pitches.append(number_dict.keys()[max_index])
+	return det_pitches
 
 def parse_musescore(filename):
 	with open(filename,'r') as fr:
@@ -61,10 +85,18 @@ def draw_result(std_filename,pitches,onset_frame):
 	    std_frame.append(temp_frame)
 	    std_pitch.append(temp_pitch)
 
+	onset_time = []
+	for i in range(len(pitches)):
+		if i in onset_frame:
+			onset_time.append(100)
+		else:
+			onset_time.append(0)
+
 	fig = plt.figure()
 	plt.scatter(range(len(pitches)), det_pitch, color = 'b', s = 5,marker = '.',linewidths=0.001)
 	for i in range(len(std_frame)):
 		plt.scatter(std_frame[i],std_pitch[i],color='r',s=5,marker='.',linewidths=0.001)
+	plt.plot(range(len(pitches)),onset_time,color='g')
 	plt.show()
 
 

@@ -56,6 +56,28 @@ def get_onset_time_syllable_duration_ref(syllable_durations, len_audio):
 
     return onset_time, sd_norm * len_audio
 
+def flag_pause(pitches):
+    _pitches = np.array(pitches).copy()
+    _pitches = _pitches.astype(int)
+    number,start_loc= 0,0
+    for i,_det in enumerate(_pitches,start=1):
+        if i==len(_pitches):
+            break
+        diff = abs(_pitches[i]- _pitches[i-1])
+        if _det==0 or _det<20 or (diff>2 and diff!=12 and diff!=11 and diff!=13):
+            if number>=8:
+                break
+            number = 0
+            start_loc = 0
+        elif diff<=2 or (diff>=11 and diff<=13):
+            if number==0:
+                start_loc = i-1
+            number+=1
+    #slience = len(pitches)-(number+start_loc)
+    #flag = number+start_loc if slience>90 else 0
+    flag = number+start_loc
+    return flag
+
 
 if __name__ == '__main__':
     filename_score = '../data/score_exercise_01.txt'
