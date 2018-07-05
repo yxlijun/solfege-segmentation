@@ -122,6 +122,10 @@ class MFSHS(object):
                 PSF = np.append(PSF,0)
         return PSF
 
+    def saveArray(self,filename,Array_list):
+        with open(filename,"w") as f:
+            for arr in Array_list:
+                f.write(str(arr)+"\n")
 
 
 

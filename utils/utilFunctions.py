@@ -63,13 +63,20 @@ def flag_pause(pitches):
     for i,_det in enumerate(_pitches,start=1):
         if i==len(_pitches):
             break
+        pitch_range = sorted(_pitches[i:i+4])
+        smooth_pitch = True
+        if len(pitch_range)==4:
+            max_pitch = pitch_range[-2:]
+            if abs(max_pitch[0]-max_pitch[1])<=2 and max_pitch[0]>25:
+                smooth_pitch = False
+
         diff = abs(_pitches[i]- _pitches[i-1])
-        if _det==0 or _det<20 or (diff>2 and diff!=12 and diff!=11 and diff!=13):
+        if (_det==0 or _det<20 or (diff>2 and diff!=12 and diff!=11 and diff!=13)) and smooth_pitch:
             if number>=8:
                 break
             number = 0
             start_loc = 0
-        elif diff<=2 or (diff>=11 and diff<=13):
+        elif diff<=2 or (diff>=11 and diff<=13) or (not smooth_pitch):
             if number==0:
                 start_loc = i-1
             number+=1

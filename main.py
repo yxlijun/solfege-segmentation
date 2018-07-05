@@ -37,6 +37,7 @@ def _main(wav_file):
 	pitches = np.array(pitchResult['pitch'])
 	frequency = np.array(pitchResult['frequency'])
 
+
 	log_mel_old = get_log_mel_madmom(wav_file, fs=fs_wav, hopsize_t=hopsize_t, channel=1)
 	log_mel = scaler_joint.transform(log_mel_old)
 	log_mel = feature_reshape(log_mel, nlen=7)
@@ -51,23 +52,27 @@ def _main(wav_file):
 
 	log_filt_spec = madmom.audio.spectrogram.LogarithmicFilteredSpectrogram(wav_file, num_bands=24,num_channels=1,frame_size=2048, hop_size=441)
 	superflux_3 = madmom.features.onsets.superflux(log_filt_spec)
-	onset_frame = np.argwhere((superflux_3/superflux_3.max())>0.17).flatten()
+	sf_onset_frame = np.argwhere((superflux_3/superflux_3.max())>0.1).flatten()
 
-	resultOnset = findPeak(obs_syllable,frequency,pitches,onset_frame)
+	#print sf_onset_frame
+	resultOnset = findPeak(obs_syllable,frequency,pitches,42,sf_onset_frame)
 
-	filename = './data/test.json'
-	std_filename = './data/audio1/test_midi.txt'
-	result_info = saveJson(filename,pitches,resultOnset['onset_frame'])
+	filename_json = os.path.splitext(wav_file)[0]+".json"
+	#std_filename = './data/audio1/test_midi.txt'
+	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'])
 	#draw_result(std_filename,pitches,resultOnset['onset_frame'])
-	notes = pitch_Note(result_info)
-	print  resultOnset
+	#notes = pitch_Note(result_info)
+	filename_pitch = os.path.splitext(wav_file)[0]+"_pitch.txt"
+	mfshs.saveArray(filename_pitch,pitches)
+	for pit_time in resultOnset['onset_time']:
+		print pit_time
 
 
 
 if __name__=='__main__':
 	root_path = os.path.join(os.path.dirname(__file__),'data','audio1')
-	wav_file = os.path.join(root_path,'test.mp3')
-	_main(wav_file)
+	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
+	_main(wav_file[0])
 
 
 
