@@ -19,14 +19,16 @@ from utils.peakDetection import findPeak
 from pitchDetection.mfshs import MFSHS
 from dataFunction import saveJson,draw_result,parse_musescore,pitch_Note
 import warnings
+import time
 warnings.filterwarnings('ignore')
 
 
 
 def _main(wav_file):
-	score_pitch = parse_musescore('./data/audio1/1A_22_final.json')
+	
 	root_path = os.path.join(os.path.dirname(__file__))
 	joint_cnn_model_path = os.path.join(root_path, 'cnnModels', 'joint')
+
 	# load keras joint cnn model
 	model_joint = load_model(os.path.join(joint_cnn_model_path, 'jan_joint0.h5'))
 	# load log mel feature scaler
@@ -36,7 +38,6 @@ def _main(wav_file):
 	pitchResult = mfshs.frame()
 	pitches = np.array(pitchResult['pitch'])
 	frequency = np.array(pitchResult['frequency'])
-
 
 	log_mel_old = get_log_mel_madmom(wav_file, fs=fs_wav, hopsize_t=hopsize_t, channel=1)
 	log_mel = scaler_joint.transform(log_mel_old)
@@ -49,14 +50,16 @@ def _main(wav_file):
 	obs_syllable[0] = 1.0
 	obs_syllable[-1] = 0.0
 
-
+	
 	log_filt_spec = madmom.audio.spectrogram.LogarithmicFilteredSpectrogram(wav_file, num_bands=24,num_channels=1,frame_size=2048, hop_size=441)
 	superflux_3 = madmom.features.onsets.superflux(log_filt_spec)
 	sf_onset_frame = np.argwhere((superflux_3/superflux_3.max())>0.1).flatten()
 
 	#print sf_onset_frame
-	resultOnset = findPeak(obs_syllable,frequency,pitches,42,sf_onset_frame)
+	score_pitch = parse_musescore('./data/98/1A_23_final.json')
 
+	resultOnset = findPeak(obs_syllable,frequency,pitches,71,sf_onset_frame)
+	
 	filename_json = os.path.splitext(wav_file)[0]+".json"
 	#std_filename = './data/audio1/test_midi.txt'
 	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'])
@@ -64,13 +67,15 @@ def _main(wav_file):
 	#notes = pitch_Note(result_info)
 	filename_pitch = os.path.splitext(wav_file)[0]+"_pitch.txt"
 	mfshs.saveArray(filename_pitch,pitches)
+	filename_prob = os.path.splitext(wav_file)[0]+"_prob.txt"
+	mfshs.saveArray(filename_prob,obs_syllable)
 	for pit_time in resultOnset['onset_time']:
 		print pit_time
-
+	
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','audio1')
+	root_path = os.path.join(os.path.dirname(__file__),'data','99')
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	_main(wav_file[0])
 

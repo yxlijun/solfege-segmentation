@@ -26,9 +26,14 @@
 
 framesize_t = 0.025  # in second
 hopsize_t = 0.010
-#hopsize_t = 512.0/44100
+onset_distance = 15
+min_continue_time = 8
 
-
+'''
+onset_distance = 3
+hopsize_t = 0.050
+min_continue_time = 2
+'''
 varin = {}
 # parameters of viterbi
 varin['delta_mode'] = 'proportion'

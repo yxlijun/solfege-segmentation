@@ -1,7 +1,7 @@
 
 import numpy as np      
 import collections
-from .parameters import hopsize_t
+from .parameters import hopsize_t, onset_distance,min_continue_time
 from utils.utilFunctions import flag_pause
 
 def mergeframe(sf_onset_frame):
@@ -32,38 +32,43 @@ def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
 	for idx in range(1,len(obs_syllable)-1):
 		if (obs_syllable[idx]-obs_syllable[idx-1]>0) and (obs_syllable[idx]-obs_syllable[idx+1]>0) and (obs_syllable[idx]>1):
 			peak[idx] = obs_syllable[idx]
-
 	syllable_onset = peak.keys()[0:-1]
 	syllable_offset = peak.keys()[1:]
 	syllable_onset.append(syllable_offset[-1])
 	syllable_offset.append(len(obs_syllable)-1)
-	boundaries_onsetframe = np.empty(shape=(0),dtype=np.int)
-	boundaries_offsetframe = np.empty(shape=(0),dtype=np.int)
 	realOnset = []
 
 	for x in xrange(len(syllable_onset)):
 		pitch = pitches[syllable_onset[x]:syllable_offset[x]]
 		count = 0
+		cancidate_onset = []
+		cancidate_count = []
 		for i,det in enumerate(pitch,start=1):
 			if i==len(pitch):
+				if count>=min_continue_time:
+					cancidate_onset.append(syllable_onset[x]+i-count)
+					cancidate_count.append(count)
 				break
 			diff = abs(int(pitch[i])-int(pitch[i-1]))
 			if int(det)==0 or diff>2 or int(det)<20:
+				if count>=min_continue_time:
+					cancidate_onset.append(syllable_onset[x]+i-count)
+					cancidate_count.append(count)
 				count = 0
 			elif diff<=2:
 				count+=1
-			if count>=8:
-				if len(realOnset)==0:
-					realOnset.append(syllable_onset[x]+i-8)
-					boundaries_onsetframe = np.append(boundaries_onsetframe,syllable_onset[x])
-					boundaries_offsetframe = np.append(boundaries_offsetframe,syllable_offset[x])
-				else:
-					if ((syllable_onset[x]+i-8)-realOnset[-1])>15:
-						realOnset.append(syllable_onset[x]+i-8)
-						boundaries_onsetframe = np.append(boundaries_onsetframe,syllable_onset[x])
-						boundaries_offsetframe = np.append(boundaries_offsetframe,syllable_offset[x])
-				break
+		if len(cancidate_onset)>0:
+			cancidate_num = np.array(cancidate_count)
+			max_index = np.argmax(cancidate_num)
+			onset = cancidate_onset[max_index]
+			if len(realOnset)==0:
+				realOnset.append(onset)
+			else:
+				if (onset-realOnset[-1])>onset_distance:
+					realOnset.append(onset)
 
+	for det in realOnset:
+		print det*hopsize_t
 	real_onset_frame = np.array(sorted(realOnset),dtype=np.int)
 	if len(real_onset_frame)==score_length:
 		onsets = real_onset_frame.copy()
@@ -82,7 +87,7 @@ def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
 		pitch_info['onset'] = cur_onset_frame
 		pitch_info['offset'] = offset_frame[idx]
 		flag = flag_pause(pitch)
-		pitch_info['pitch_end'] = flag+cur_onset_frame
+		pitch_info['pitch_end'] = flag
 		result_info.append(pitch_info)
 
 	pitch_onset_frame = np.empty(shape=(0),dtype=int)
@@ -92,9 +97,8 @@ def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
 	for info in result_info:
 		pitch_on_length  = np.append(pitch_on_length,info['pitch_end'])
 		pitch_onset_frame = np.append(pitch_onset_frame,info['onset'])
-		pitch_end_loc = np.append(pitch_end_loc,info['pitch_end'])
+		pitch_end_loc = np.append(pitch_end_loc,info['pitch_end']+info['onset'])
 	
-
 	if len(real_onset_frame)>score_length:
 		excessLength = len(real_onset_frame)-score_length
 		del_onset = np.argsort(pitch_on_length)[0:excessLength]
@@ -105,7 +109,7 @@ def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
 		cancidate_onset_length = []
 		for idx,_detframe in enumerate(pitch_end_loc):
 			omiss_pitch = pitches[_detframe:offset_frame[idx]]
-			if len(omiss_pitch)>15:
+			if len(omiss_pitch)>onset_distance:
 				omiss_index = np.argwhere(omiss_pitch>25).ravel()
 				omiss_index = np.add(omiss_index,_detframe)
 				cancidate_onset.append(omiss_index)
@@ -123,10 +127,11 @@ def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
 		continuous_length = np.array([len(x) for x in max_contiguous_frame])
 		real_contious_range = np.array(max_contiguous_frame)[np.argsort(continuous_length)[::-1]]
 
+		print real_contious_range
 		count = 0
 		for _det in real_contious_range:
 			_det_gt = np.where(real_onset_frame>_det[0])[0]
-			if abs(_det[0] - real_onset_frame[_det_gt[0]])>15 and abs(_det[0] - real_onset_frame[_det_gt[0]-1])>15:
+			if abs(_det[0] - real_onset_frame[_det_gt[0]])>(onset_distance-5) and abs(_det[0] - real_onset_frame[_det_gt[0]-1])>(onset_distance-3):
 				real_onset_frame = np.append(real_onset_frame,_det[0])
 				count+=1
 				if count ==omissionLength:

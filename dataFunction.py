@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from utils.parameters import hopsize_t
 from utils.utilFunctions import flag_pause
 
+sample_ratio = 0.3
 
 def saveJson(filename,pitches,onset_frame):
 	result_info = []
@@ -15,13 +16,22 @@ def saveJson(filename,pitches,onset_frame):
 	for idx,cur_onset_frame in enumerate(onset_frame):
 		pitch_info = {}
 		cur_offset_frame = offset_frame[idx]
-		pitch = pitches[cur_onset_frame:cur_offset_frame].tolist()
-		pitch_info['pitches'] = pitch
+		pitch = pitches[cur_onset_frame:cur_offset_frame]
+		voiced_length = flag_pause(pitch)
+		slience_length = len(pitch)-voiced_length
+		sample_voice_length = int(voiced_length*sample_ratio)
+		sameple_slience_length = int(slience_length*sample_ratio)
+
+		voice_indices = np.random.permutation(sample_voice_length)
+		slience_indices = np.random.permutation(sameple_slience_length)
+		voiced_pitch = pitch[:voiced_length][voice_indices]
+		slience_pitch = pitch[voiced_length:][slience_indices]
+		pitch = np.append(voiced_pitch,slience_pitch).tolist()
 		pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
-		flag = flag_pause(pitch)
-		pitch_info['flag'] = flag
+		pitch_info['flag'] = sample_voice_length
+		pitch_info['pitches'] = pitch
 		result_info.append(pitch_info)
-		
+				
 
 	with open(filename,'w') as f:
 		json.dump(result_info,f)
