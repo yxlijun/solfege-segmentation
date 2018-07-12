@@ -27,7 +27,7 @@
 framesize_t = 0.025  # in second
 hopsize_t = 0.010
 onset_distance = 15
-min_continue_time = 8
+min_continue_time = 10
 
 '''
 onset_distance = 3

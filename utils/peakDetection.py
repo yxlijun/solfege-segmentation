@@ -26,12 +26,13 @@ def group_consecutives(vals, step=1):
         expect = v + step
     return result
 
-def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
+def findPeak(obs_syllable,frequency,pitches,score_length):
 	obs_syllable=obs_syllable*100
 	peak = collections.OrderedDict()
 	for idx in range(1,len(obs_syllable)-1):
 		if (obs_syllable[idx]-obs_syllable[idx-1]>0) and (obs_syllable[idx]-obs_syllable[idx+1]>0) and (obs_syllable[idx]>1):
 			peak[idx] = obs_syllable[idx]
+			
 	syllable_onset = peak.keys()[0:-1]
 	syllable_offset = peak.keys()[1:]
 	syllable_onset.append(syllable_offset[-1])
@@ -67,8 +68,8 @@ def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
 				if (onset-realOnset[-1])>onset_distance:
 					realOnset.append(onset)
 
-	for det in realOnset:
-		print det*hopsize_t
+	#for det in realOnset:
+	#	print det*hopsize_t
 	real_onset_frame = np.array(sorted(realOnset),dtype=np.int)
 	if len(real_onset_frame)==score_length:
 		onsets = real_onset_frame.copy()
@@ -103,41 +104,7 @@ def findPeak(obs_syllable,frequency,pitches,score_length,sf_onset_frame=[]):
 		excessLength = len(real_onset_frame)-score_length
 		del_onset = np.argsort(pitch_on_length)[0:excessLength]
 		pitch_onset_frame = np.array(np.delete(pitch_onset_frame,del_onset))
-	else:
-		omissionLength = score_length-len(real_onset_frame)
-		cancidate_onset = []
-		cancidate_onset_length = []
-		for idx,_detframe in enumerate(pitch_end_loc):
-			omiss_pitch = pitches[_detframe:offset_frame[idx]]
-			if len(omiss_pitch)>onset_distance:
-				omiss_index = np.argwhere(omiss_pitch>25).ravel()
-				omiss_index = np.add(omiss_index,_detframe)
-				cancidate_onset.append(omiss_index)
-				cancidate_onset_length.append(len(omiss_index))
-		cancidate_onset_length = np.array(cancidate_onset_length)
-		length_max = np.argsort(cancidate_onset_length)[-(omissionLength+5):]
-		cancidate_onset = np.array(cancidate_onset)[length_max]
+		real_onset_frame = pitch_onset_frame
 
-		max_contiguous_frame = []
-		for cancidate in cancidate_onset:
-			continuous =  group_consecutives(cancidate)
-			con_length = np.array([len(x) for x in continuous])
-			max_contiguous_frame.append(continuous[np.argsort(con_length)[-1]])
-
-		continuous_length = np.array([len(x) for x in max_contiguous_frame])
-		real_contious_range = np.array(max_contiguous_frame)[np.argsort(continuous_length)[::-1]]
-
-		print real_contious_range
-		count = 0
-		for _det in real_contious_range:
-			_det_gt = np.where(real_onset_frame>_det[0])[0]
-			if abs(_det[0] - real_onset_frame[_det_gt[0]])>(onset_distance-5) and abs(_det[0] - real_onset_frame[_det_gt[0]-1])>(onset_distance-3):
-				real_onset_frame = np.append(real_onset_frame,_det[0])
-				count+=1
-				if count ==omissionLength:
-					break
-		pitch_onset_frame = np.sort(real_onset_frame)
-
-	assert len(pitch_onset_frame)==score_length,'onset number must be same as scoremuse'
-	onsetResult = {'onset_frame':pitch_onset_frame,'onset_time':pitch_onset_frame*hopsize_t}
+	onsetResult = {'onset_frame':real_onset_frame,'onset_time':real_onset_frame*hopsize_t}
 	return onsetResult

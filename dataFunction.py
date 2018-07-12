@@ -6,10 +6,31 @@ import matplotlib
 import matplotlib.pyplot as plt
 from utils.parameters import hopsize_t
 from utils.utilFunctions import flag_pause
+from utils.Dtw import detNote_map_score,detNote_map_score_code
 
 sample_ratio = 0.3
 
-def saveJson(filename,pitches,onset_frame):
+
+def filter_pitch(pitches):
+	pitches = np.array(pitches)
+	pitches[np.where(pitches>50)[0]] = 0.0
+	pitches[np.where(pitches<30)[0]] = 0.0
+	dpitches = np.copy(pitches)
+	for i in range(len(dpitches)-2):
+		indices = np.argsort(pitches[i:i+3])
+		diff1,diff2 = abs(pitches[i+indices[0]]-pitches[i+indices[1]]),abs(pitches[i+indices[1]]-pitches[i+indices[2]])
+		if diff1>2 and diff2<=2:
+			dpitches[i+indices[0]] = dpitches[i+indices[2]]
+		elif diff1<=2 and diff2>2:
+			dpitches[i+indices[2]] = dpitches[i+indices[0]]
+
+	zero_indices = np.where(dpitches==0)[0]
+	if len(zero_indices)<=5:
+		dpitches[zero_indices] = dpitches[0]
+	return dpitches.tolist()
+
+
+def process_pitch(pitches,onset_frame):
 	result_info = []
 	offset_frame = onset_frame[1:]
 	offset_frame = np.append(offset_frame,len(pitches)-1)
@@ -18,29 +39,17 @@ def saveJson(filename,pitches,onset_frame):
 		cur_offset_frame = offset_frame[idx]
 		pitch = pitches[cur_onset_frame:cur_offset_frame]
 		voiced_length = flag_pause(pitch)
-		slience_length = len(pitch)-voiced_length
-		sample_voice_length = int(voiced_length*sample_ratio)
-		sameple_slience_length = int(slience_length*sample_ratio)
-
-		voice_indices = np.random.permutation(sample_voice_length)
-		slience_indices = np.random.permutation(sameple_slience_length)
-		voiced_pitch = pitch[:voiced_length][voice_indices]
-		slience_pitch = pitch[voiced_length:][slience_indices]
-		pitch = np.append(voiced_pitch,slience_pitch).tolist()
-		pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
-		pitch_info['flag'] = sample_voice_length
-		pitch_info['pitches'] = pitch
+		pitch_info['onset'] = cur_onset_frame
+		pitch_info['flag'] = voiced_length
+		pitch_info['pitches'] = filter_pitch(pitch)
 		result_info.append(pitch_info)
-				
-
-	with open(filename,'w') as f:
-		json.dump(result_info,f)
-
 	return result_info
 
 
-def pitch_Note(result_info):
+def pitch_Note(pitches,onset_frame):
+	result_info = process_pitch(pitches,onset_frame)
 	det_pitches = []
+	det_onsets = []
 	for _info in result_info:
 		loc_flag = _info['flag']
 		pitches = np.array(_info['pitches'][:loc_flag],dtype=int)
@@ -50,9 +59,82 @@ def pitch_Note(result_info):
 		for _det in unique_pitch:
 			count = pitches.tolist().count(_det)
 			number_dict[_det] = count
-		max_index = np.argmax(np.array(number_dict.values()))
-		det_pitches.append(number_dict.keys()[max_index])
-	return det_pitches
+		number_values = np.array(number_dict.values())
+		if len(number_values)>0:
+			max_index = np.argmax(number_values)
+			det_pitches.append(number_dict.keys()[max_index])
+			det_onsets.append(_info['onset'])
+
+	Note_and_onset = {'notes':det_pitches,'onsets':det_onsets}
+	return Note_and_onset
+
+
+def get_result_info(onset_frame,offset_frame,pitches,equalZero=[]):
+	result_info = []
+	for idx,cur_onset_frame in enumerate(onset_frame):
+		pitch_info = {}
+		if idx in equalZero:
+			pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
+			pitch_info['flag'] = 0
+			pitch_info['pitches'] = np.zeros(10).tolist()
+			result_info.append(pitch_info)
+		else:
+			cur_offset_frame = offset_frame[idx]
+			pitch = pitches[cur_onset_frame:cur_offset_frame]
+			voiced_length = flag_pause(pitch)
+			slience_length = len(pitch)-voiced_length
+			sample_voice_length = int(voiced_length*sample_ratio)
+			sameple_slience_length = int(slience_length*sample_ratio)
+			voice_indices = np.random.permutation(sample_voice_length)
+			slience_indices = np.random.permutation(sameple_slience_length)
+			voiced_pitch = pitch[:voiced_length][voice_indices]
+			slience_pitch = pitch[voiced_length:][slience_indices]
+			pitch = np.append(voiced_pitch,slience_pitch).tolist()
+			pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
+			pitch_info['flag'] = sample_voice_length
+			pitch_info['pitches'] = filter_pitch(pitch)
+			result_info.append(pitch_info)
+
+	return result_info
+
+def saveJson(filename,pitches,onset_frame,score_note):
+	result_info = []
+	if len(onset_frame)==len(score_note):
+		offset_frame = onset_frame[1:]
+		offset_frame = np.append(offset_frame,len(pitches)-1)
+		result_info = get_result_info(onset_frame,offset_frame,pitches)
+		print "keys .......1"
+	else:
+		Note_and_onset = pitch_Note(pitches,onset_frame)
+		modify_onset =  detNote_map_score_code(pitches,score_note,onset_frame)
+		equalZero = np.where(modify_onset==0)[0]
+		offset_frame = []
+
+		if len(equalZero)>(len(score_note)-len(onset_frame)):
+			offset_frame_temp = []
+			samescore_length_onsets = detNote_map_score(Note_and_onset,score_note)
+			for i in range(1,len(samescore_length_onsets)):
+				for j in range(i,len(samescore_length_onsets)):
+					if samescore_length_onsets[j]-samescore_length_onsets[i-1]>0:
+						offset_frame_temp.append(samescore_length_onsets[j])
+						break
+			offset_frame_temp.append(len(pitches)-1)
+			offset_frame = np.array(offset_frame_temp)
+			result_info = get_result_info(samescore_length_onsets,offset_frame,pitches)
+			print "keys .......2"
+		else:
+			for i in range(1,len(modify_onset)-2):
+				if modify_onset[i] == 0:
+					modify_onset[i] = int((modify_onset[i-1]+modify_onset[i+1])/2)
+			offset_frame = modify_onset[1:]
+			offset_frame = np.append(offset_frame,len(pitches)-1)
+			result_info = get_result_info(modify_onset,offset_frame,pitches,equalZero)
+			print 'kesy ........3'
+	with open(filename,'w') as f:
+		json.dump(result_info,f)
+
+	return result_info
+
 
 def parse_musescore(filename):
 	with open(filename,'r') as fr:
