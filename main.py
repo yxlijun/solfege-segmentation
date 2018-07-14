@@ -51,23 +51,24 @@ def _main(wav_file):
 	obs_syllable[-1] = 0.0
 
 	#print sf_onset_frame
-	score_note = parse_musescore('./data/audio1/1A_22_final.json')
-	resultOnset = findPeak(obs_syllable,frequency,pitches,42)
+	score_note = parse_musescore('./data/98/1A_23_final.json')
+	resultOnset = findPeak(obs_syllable,frequency,pitches,71)
 	filename_json = os.path.splitext(wav_file)[0]+".json"
 	#std_filename = './data/audio1/test_midi.txt'
 	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note)
-
 	#draw_result(std_filename,pitches,resultOnset['onset_frame'])
 	filename_pitch = os.path.splitext(wav_file)[0]+"_pitch.txt"
 	mfshs.saveArray(filename_pitch,pitches)
 	filename_prob = os.path.splitext(wav_file)[0]+"_prob.txt"
 	mfshs.saveArray(filename_prob,obs_syllable)
+	filename_score = os.path.splitext(wav_file)[0]+"_score.txt"
+	mfshs.saveArray(filename_score,score_note)
 	for pit_time in resultOnset['onset_time']:
 		print pit_time
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','94')
+	root_path = os.path.join(os.path.dirname(__file__),'data','98')
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	_main(wav_file[0])
 

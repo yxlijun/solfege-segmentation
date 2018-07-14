@@ -1,10 +1,12 @@
 
 #coding:utf-8
-
+from __future__ import division
 import numpy as np 
 from sklearn.metrics.pairwise import manhattan_distances
 from dtw import dtw
 from fuzzywuzzy import fuzz
+from itertools import product,combinations
+import copy 
 
 
 def dtw_note(det_notes,score_note):
@@ -60,7 +62,10 @@ def coding(list):
     code = []
     for i in range(0, length - 1):
         l = list[i] - list[i + 1]
-        code.append(l)
+        if l > 0:
+            code.append(1)
+        else:
+            code.append(0)
     code.append(0)
     return code
 
@@ -151,4 +156,104 @@ def detNote_map_score_code(pitches,score_note,onset_frame):
 	        timeoutputlist[i] = 0
 	return np.array(timeoutputlist)
 
+
+def code_judge_score(score,new_list):
+	score = np.array(score)
+	new_list = np.array(new_list)
+	mask = (score==new_list).astype(int)
+	return np.sum(mask)
+    
+
+def detNote_insert_score(pitches,score_note,onset_frame):
+	pitch,score,time = np.array(pitches,dtype=int),np.array(score_note),np.array(onset_frame)
+	score_length = len(score_note)
+	det_length = len(onset_frame)
+	list1 = find(time, pitch)
+	score_code = coding(score)
+	list_code = coding(list1)
+	need_to_insert = score_length - det_length
+	new_list1 = copy.copy(list1)
+	list_code = copy.copy(list_code)
+	grade = []
+	outputlist_list = []
+	insert_indices = list(product(range(score_length), repeat=need_to_insert))
+	for indices in insert_indices:
+		indices = [int(i) for i in indices]
+		for index in indices:
+			new_list1.insert(index,99)
+			list_code.insert(index,10)
+		gpa = code_judge_score(score_code, list_code) + code_judge_score(score,new_list1)
+		grade.append(gpa)
+		cur_insert_indice = []
+		for index in indices:
+			new_list1.pop(index)
+			list_code.pop(index)
+			cur_insert_indice.append(index)
+		outputlist_list.append(cur_insert_indice)
+
+	pos = grade.index(max(grade))
+	k = outputlist_list[pos]
+	timeoutput = copy.copy(time).tolist()
+	for i in range(len(k)):
+		timeoutput.insert(k[i],0)
+	return np.array(timeoutput)
+
+
+
+def search(pitches,onset_frame):
+	Note = []
+	for i in range(len(onset_frame)):
+		start = onset_frame[i]
+		total,count = 0,0
+		for j in range(10):
+			if (abs(pitches[start+j]-pitches[start+j+1])<0.5):
+				count+=1
+				total+=pitches[start+j+1]
+		Note.append(total/count)
+	return Note
+
+def diff_code(score_note):
+	diffcode = []
+	for idx in range(len(score_note)-1):
+		if (score_note[idx]<score_note[idx+1]):
+			diffcode.append(1)
+		elif score_note[idx]>score_note[idx+1]:
+			diffcode.append(-1)
+		else:
+			diffcode.append(0)
+	return diffcode
+
+def detNote_insert_score_LLY(pitches,score_note,onset_frame):
+	diffLength = len(score_note)-len(onset_frame)
+	insert_indices = list(combinations(range(len(onset_frame)+1), diffLength))
+	Note = search(pitches,onset_frame)
+	temp_p = diff_code(score_note)
+	insert_Count = []
+	for i in range(len(insert_indices)):
+		count = 0
+		insert_Note = Note[:]
+		temp_q = []
+		for j in range(diffLength):
+			insert_Note.insert(insert_indices[i][j]+j,0)
+		for idx in range(len(score_note)-1):
+			if insert_Note[idx]==0:
+				temp_q.append(temp_p[idx])
+			elif insert_Note[idx+1]==0:
+				temp_q.append(temp_p[idx])
+			elif (insert_Note[idx]<insert_Note[idx+1]-0.5):
+				temp_q.append(1)
+			elif (insert_Note[idx]-insert_Note[idx+1]>0.5):
+				temp_q.append(-1)
+			else:
+				temp_q.append(0)
+		for n in range(len(score_note)-1):
+			if (temp_p[n]==temp_q[n]):
+				count+=1
+		insert_Count.append(count)
+
+	insert_loc = insert_indices[insert_Count.index(max(insert_Count))]
+	insert_onset_frame = onset_frame.tolist()
+	for loc in insert_loc:
+		insert_onset_frame.insert(loc,0)
+	return np.array(insert_onset_frame)
 
