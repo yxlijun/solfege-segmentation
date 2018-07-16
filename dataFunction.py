@@ -11,7 +11,7 @@ from utils.Dtw import detNote_map_score,detNote_map_score_code,detNote_insert_sc
 sample_ratio = 0.3
 
 
-def filter_pitch(pitches,score_note,paddingzero):
+def filter_pitch(pitches,score_note,paddingzero=False):
 	max_note,min_note = max(score_note)+6,min(score_note)-6
 	pitches = np.array(pitches)
 	pitches[np.where(pitches>max_note)[0]] = 0.0
