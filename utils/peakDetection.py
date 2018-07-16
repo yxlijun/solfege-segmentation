@@ -32,7 +32,10 @@ def findPeak(obs_syllable,frequency,pitches,score_length):
 	for idx in range(1,len(obs_syllable)-1):
 		if (obs_syllable[idx]-obs_syllable[idx-1]>0) and (obs_syllable[idx]-obs_syllable[idx+1]>0) and (obs_syllable[idx]>1):
 			peak[idx] = obs_syllable[idx]
-			
+
+	if len(peak.keys())==0:
+		result_info = {'onset_frame':[],'onset_time':[]}
+		return result_info
 	syllable_onset = peak.keys()[0:-1]
 	syllable_offset = peak.keys()[1:]
 	syllable_onset.append(syllable_offset[-1])
@@ -68,8 +71,8 @@ def findPeak(obs_syllable,frequency,pitches,score_length):
 				if (onset-realOnset[-1])>onset_distance:
 					realOnset.append(onset)
 
-	#for det in realOnset:
-	#	print det*hopsize_t
+	
+	
 	real_onset_frame = np.array(sorted(realOnset),dtype=np.int)
 	if len(real_onset_frame)==score_length:
 		onsets = real_onset_frame.copy()
