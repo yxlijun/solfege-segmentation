@@ -162,13 +162,14 @@ def parse_musescore(filename):
 		for note_info in noteList:
 			if int(note_info['pitch'])!=0:
 				score_pitches.append(int(note_info['pitch']))
-				pitchesLoc.append(count+1)
+				pitchesLoc.append(count)
 			else:
 				pauseLoc.append(count)
 			count+=1
 	for i,pause in enumerate(pauseLoc):
-		index = pitchesLoc.index(pause)
-		pauseLoc[i] = index
+		index = np.where(np.array(pitchesLoc)<pause)[0]
+		pauseLoc[i] = index[-1] if len(index)>0 else 0
+		
 	return score_pitches,pauseLoc
 
 '''

@@ -15,7 +15,7 @@ from utils.parameters import varin
 from utils.utilFunctions import smooth_obs
 from utils.peakDetection import findPeak
 from pitchDetection.mfshs import MFSHS
-from dataFunction import saveJson,draw_result,parse_musescore,pitch_Note
+from dataFunction import saveJson,parse_musescore,pitch_Note
 import warnings
 import time
 warnings.filterwarnings('ignore')
@@ -66,9 +66,11 @@ def _main(wav_file):
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','test')
+	start_time = time.time()
+	root_path = os.path.join(os.path.dirname(__file__),'data','empty')
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	_main(wav_file[0])
+	print time.time()-start_time
 
 
 
