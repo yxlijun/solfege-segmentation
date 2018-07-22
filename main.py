@@ -60,8 +60,9 @@ def _main(wav_file):
 
 	start_time = time.time()
 	#print sf_onset_frame
-	score_note,pauseLoc = parse_musescore('./data/93/1A_22_final.json')
-	resultOnset = findPeak(obs_syllable,frequency,pitches,42)
+	score_note,pauseLoc = parse_musescore('./data/Jinggle_bell/score.json')
+	print(len(score_note))
+	resultOnset = findPeak(obs_syllable,frequency,pitches,len(score_note))
 	filename_json = os.path.splitext(wav_file)[0]+".json"
 	#std_filename = './data/audio1/test_midi.txt'
 	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc)
@@ -74,12 +75,12 @@ def _main(wav_file):
 	filename_score = os.path.splitext(wav_file)[0]+"_score.txt"
 	mfshs.saveArray(filename_score,score_note)
 	for pit_time in resultOnset['onset_time']:
-		#print pit_time
-		pass
+		print pit_time
+		#pass
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','76')
+	root_path = os.path.join(os.path.dirname(__file__),'data','Jinggle_bell')
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	_main(wav_file[0])
 

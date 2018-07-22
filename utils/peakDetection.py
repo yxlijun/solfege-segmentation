@@ -30,12 +30,13 @@ def findPeak(obs_syllable,frequency,pitches,score_length):
 	obs_syllable=obs_syllable*100
 	peak = collections.OrderedDict()
 	for idx in range(1,len(obs_syllable)-1):
-		if (obs_syllable[idx]-obs_syllable[idx-1]>0) and (obs_syllable[idx]-obs_syllable[idx+1]>0) and (obs_syllable[idx]>1):
+		if (obs_syllable[idx]-obs_syllable[idx-1]>0) and (obs_syllable[idx]-obs_syllable[idx+1]>0) and (obs_syllable[idx]>1.5):
 			peak[idx] = obs_syllable[idx]
 
 	if len(peak.keys())==0:
 		result_info = {'onset_frame':[],'onset_time':[]}
 		return result_info
+	print peak
 	syllable_onset = peak.keys()[0:-1]
 	syllable_offset = peak.keys()[1:]
 	syllable_onset.append(syllable_offset[-1])
