@@ -36,7 +36,6 @@ def findPeak(obs_syllable,frequency,pitches,score_length):
 	if len(peak.keys())==0:
 		result_info = {'onset_frame':[],'onset_time':[]}
 		return result_info
-	print peak
 	syllable_onset = peak.keys()[0:-1]
 	syllable_offset = peak.keys()[1:]
 	syllable_onset.append(syllable_offset[-1])

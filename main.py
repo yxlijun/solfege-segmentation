@@ -60,7 +60,7 @@ def _main(wav_file):
 
 	start_time = time.time()
 	#print sf_onset_frame
-	score_note,pauseLoc = parse_musescore('./data/Jinggle_bell/score.json')
+	score_note,pauseLoc = parse_musescore('./data/74/1A_22_final.json')
 	print(len(score_note))
 	resultOnset = findPeak(obs_syllable,frequency,pitches,len(score_note))
 	filename_json = os.path.splitext(wav_file)[0]+".json"
@@ -80,7 +80,7 @@ def _main(wav_file):
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','Jinggle_bell')
+	root_path = os.path.join(os.path.dirname(__file__),'data','74')
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	_main(wav_file[0])
 
