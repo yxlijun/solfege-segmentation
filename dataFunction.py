@@ -166,8 +166,7 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc):
 			result_info,det_Note = get_result_info(modify_onset,offset_frame,pitches,score_note,pauseLoc,equalZero)
 			print 'kesy ........3'
 
-	score,is_octive = give_score(det_Note,score_note)
-	print is_octive
+	score,is_octive = give_score(det_Note,score_note) if len(det_Note)>0 else 0,False
 	results = {
 		'score':score,
 		'is_octive':is_octive,
