@@ -74,6 +74,14 @@ def pitch_Note(pitches,onset_frame,score_note):
 	return Note_and_onset
 
 
+def find_flag(pitches):
+	flag = 0
+	for i,pitch in enumerate(pitches):
+	    if pitch>=20:
+	        flag = i+1
+	return flag
+
+
 def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZero=[]):
 	result_info = []
 	det_Note = []
@@ -99,7 +107,7 @@ def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZe
 			slience_pitch = pitch[voiced_length:][slience_indices]
 			pitch = np.append(voiced_pitch,slience_pitch).tolist()
 			pitch = filter_pitch(pitch,score_note,paddingzero)
-			flag = flag_pause(pitch)
+			flag = find_flag(pitch)
 			pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
 			pitch_info['flag'] = flag
 			pitch_info['pitches'] = pitch
