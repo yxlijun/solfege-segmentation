@@ -12,7 +12,7 @@ sample_ratio = 0.3
 
 
 def filter_pitch(pitches,score_note,paddingzero=False):
-	max_note,min_note = max(score_note)+6,min(score_note)-6
+	max_note,min_note = 60,20
 	pitches = np.array(pitches)
 	pitches[np.where(pitches>max_note)[0]] = 0.0
 	pitches[np.where(pitches<min_note)[0]] = 0.0

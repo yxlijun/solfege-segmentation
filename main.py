@@ -20,7 +20,7 @@ import warnings
 import time
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
 
 def _main(wav_file):
 
@@ -60,7 +60,7 @@ def _main(wav_file):
 
 	start_time = time.time()
 	#print sf_onset_frame
-	score_note,pauseLoc = parse_musescore('./data/74/1A_22_final.json')
+	score_note,pauseLoc = parse_musescore('./data/409/PoemTang.json')
 	print(len(score_note))
 	resultOnset = findPeak(obs_syllable,frequency,pitches,len(score_note))
 	filename_json = os.path.splitext(wav_file)[0]+".json"
@@ -80,7 +80,7 @@ def _main(wav_file):
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','empty')
+	root_path = os.path.join(os.path.dirname(__file__),'data','409')
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	_main(wav_file[0])
 
