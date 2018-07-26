@@ -26,9 +26,9 @@ def filter_pitch(pitches,score_note,paddingzero=False):
 			dpitches[i+indices[2]] = dpitches[i+indices[0]]
 
 	zero_indices = np.where(dpitches==0)[0]
-	if len(zero_indices)<=15:
+	if len(zero_indices)<=15 and len(zero_indices)>0:
 		dpitches[zero_indices] = dpitches[0]
-	else:
+	elif len(zero_indices)>15:
 		dpitches[zero_indices[0]:] = 0.0
 	if paddingzero and len(zero_indices)<=15:
 		dpitches = np.append(dpitches,np.zeros(15))
