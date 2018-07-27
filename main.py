@@ -60,12 +60,12 @@ def _main(wav_file):
 
 	start_time = time.time()
 	#print sf_onset_frame
-	score_note,pauseLoc = parse_musescore('./data/409/PoemTang.json')
-	print(len(score_note))
+	score_note,pauseLoc = parse_musescore('./data/93/1A_22_final.json')
+	#print(len(score_note))
 	resultOnset = findPeak(obs_syllable,frequency,pitches,len(score_note))
 	filename_json = os.path.splitext(wav_file)[0]+".json"
 	#std_filename = './data/audio1/test_midi.txt'
-	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc)
+	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,1)
 	print 'post-processing time :' ,time.time()-start_time
 	#draw_result(std_filename,pitches,resultOnset['onset_frame'])
 	filename_pitch = os.path.splitext(wav_file)[0]+"_pitch.txt"
@@ -80,7 +80,7 @@ def _main(wav_file):
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','409')
+	root_path = os.path.join(os.path.dirname(__file__),'data','95')
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	_main(wav_file[0])
 

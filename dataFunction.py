@@ -118,22 +118,41 @@ def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZe
 	return result_info,det_Note
 
 
-def give_score(det_Note,score_note):
+def give_score(det_Note,score_note,mode):
 	det_note_octive = np.array(det_Note) % 12
 	score_note_octive = np.array(score_note) % 12 
 	det_note = np.array(det_Note)
 	score_note = np.array(score_note)
+
 	diff_note = np.abs(det_note - score_note)
 	diff_note_octive = np.abs(det_note_octive - score_note_octive)
 
 	correct_note_octive = np.where(diff_note_octive<=1.5)[0]
 	octive_note = np.where((diff_note>=10) & (diff_note<=14))[0]
 	is_octive = (len(octive_note) / len(score_note))>0.7
-	score = len(correct_note_octive)*100.0 / len(score_note)
+
+	count = 0
+	if mode==0:
+		for i,note in enumerate(score_note):
+			if abs(note - det_Note[i])<=1.5:
+				count+=1
+			elif note<=40 and ((det_Note[i]-note)>=10 and (det_Note[i]-note)<=14):
+				count+=1
+			elif note>=50 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
+				count+=1
+	elif not is_octive and mode==1:
+		count = len(np.where(diff_note<=1.5)[0])
+	elif is_octive and mode==1:
+		if note<=40 and ((det_Note[i]-note)>=10 and (det_Note[i]-note)<=14):
+			count+=1
+		elif note>=50 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
+			count+=1
+	#score = len(correct_note_octive)*100.0 / len(score_note)
+	score = count *100.0 / len(score_note)
 	return score,is_octive
 
 
-def saveJson(filename,pitches,onset_frame,score_note,pauseLoc):
+def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 	result_info = []
 	det_Note = []
 	discardData = (len(score_note)-len(onset_frame))>0.15*len(score_note)
@@ -175,7 +194,7 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc):
 			print 'kesy ........3'
 	score,is_octive= 0,False
 	if len(det_Note)>0:
-		score,is_octive = give_score(det_Note,score_note) 
+		score,is_octive = give_score(det_Note,score_note,mode) 
 	results = {
 		'score':score,
 		'is_octive':is_octive,
@@ -183,7 +202,7 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc):
 	}
 	with open(filename,'w') as f:
 		json.dump(results,f)
-
+	print('score:',score)
 	return result_info
 
 

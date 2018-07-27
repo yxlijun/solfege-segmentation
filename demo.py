@@ -15,7 +15,7 @@ warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 
-def _main(wav_file,input_json,output_json):
+def _main(wav_file,input_json,output_json,mode):
 	root_path = os.path.join(os.path.dirname(__file__))
 	joint_cnn_model_path = os.path.join(root_path, 'cnnModels', 'joint')
 	# load keras joint cnn model
@@ -41,7 +41,7 @@ def _main(wav_file,input_json,output_json):
 	#print sf_onset_frame
 	score_note,pauseLoc = parse_musescore(input_json)
 	resultOnset = findPeak(obs_syllable,frequency,pitches,len(score_note))
-	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc)
+	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,mode)
 
 
 if __name__=='__main__':
@@ -49,7 +49,8 @@ if __name__=='__main__':
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	input_json = 'input.json'
 	output_json = 'output.json'
-	_main(wav_file[0],input_json,output_json)
+	mode = 1
+	_main(wav_file[0],input_json,output_json,mode)
 
 
 
