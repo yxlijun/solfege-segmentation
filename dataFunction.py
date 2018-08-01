@@ -129,8 +129,7 @@ def give_score(det_Note,score_note,mode):
 
 	correct_note_octive = np.where(diff_note_octive<=1.5)[0]
 	octive_note = np.where((diff_note>=10) & (diff_note<=14))[0]
-	is_octive = (len(octive_note) / len(score_note))>0.7
-
+	is_octive = (len(octive_note) / len(score_note))>0.6
 	count = 0
 	if mode==0:
 		for i,note in enumerate(score_note):
@@ -138,16 +137,20 @@ def give_score(det_Note,score_note,mode):
 				count+=1
 			elif note<=40 and ((det_Note[i]-note)>=10 and (det_Note[i]-note)<=14):
 				count+=1
-			elif note>=50 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
+			elif note>=52 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
+				count+=1
+			elif (note>=40 and note<=52) and (abs(note - det_Note[i])>=10 and abs(note - det_Note[i])<=14):
 				count+=1
 	elif not is_octive and mode==1:
 		count = len(np.where(diff_note<=1.5)[0])
 	elif is_octive and mode==1:
-		if note<=40 and ((det_Note[i]-note)>=10 and (det_Note[i]-note)<=14):
-			count+=1
-		elif note>=50 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
-			count+=1
-	#score = len(correct_note_octive)*100.0 / len(score_note)
+		for i,note in enumerate(score_note):
+			if note<40 and ((det_Note[i]-note)>=10 and (det_Note[i]-note)<=14):
+				count+=1
+			elif note>52 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
+				count+=1
+			elif (note>=40 and note<=52) and (abs(note - det_Note[i])>=10 and abs(note - det_Note[i])<=14):
+				count+=1
 	score = count *100.0 / len(score_note)
 	return score,is_octive
 
@@ -162,7 +165,7 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 		offset_frame = onset_frame[1:]
 		offset_frame = np.append(offset_frame,len(pitches)-1)
 		result_info,det_Note = get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc)
-		print "keys .......1"
+		#print "keys .......1"
 	else:
 		Note_and_onset = pitch_Note(pitches,onset_frame,score_note)
 		#modify_onset =  detNote_map_score_code(pitches,score_note,onset_frame)
@@ -183,7 +186,7 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 			offset_frame_temp.append(len(pitches)-1)
 			offset_frame = np.array(offset_frame_temp)
 			result_info,det_Note = get_result_info(samescore_length_onsets,offset_frame,pitches,pauseLoc)
-			print "keys .......2"
+			#print "keys .......2"
 		else:
 			for i in range(1,len(modify_onset)-1):
 				if modify_onset[i] == 0:
@@ -191,10 +194,10 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 			offset_frame = modify_onset[1:]
 			offset_frame = np.append(offset_frame,len(pitches)-1)
 			result_info,det_Note = get_result_info(modify_onset,offset_frame,pitches,score_note,pauseLoc,equalZero)
-			print 'kesy ........3'
+			#print 'kesy ........3'
 	score,is_octive= 0,False
 	if len(det_Note)>0:
-		score,is_octive = give_score(det_Note,score_note,mode) 
+		score,is_octive = give_score(det_Note,score_note,mode)
 	results = {
 		'score':score,
 		'is_octive':is_octive,
