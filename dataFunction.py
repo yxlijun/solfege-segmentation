@@ -119,38 +119,29 @@ def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZe
 
 
 def give_score(det_Note,score_note,mode):
-	det_note_octive = np.array(det_Note) % 12
-	score_note_octive = np.array(score_note) % 12 
 	det_note = np.array(det_Note)
 	score_note = np.array(score_note)
-
-	diff_note = np.abs(det_note - score_note)
-	diff_note_octive = np.abs(det_note_octive - score_note_octive)
-
-	correct_note_octive = np.where(diff_note_octive<=1.5)[0]
-	octive_note = np.where((diff_note>=10) & (diff_note<=14))[0]
-	is_octive = (len(octive_note) / len(score_note))>0.6
+	diff_note = (det_note - score_note).astype(np.int)
+	indices = np.where((diff_note>=-24) & (diff_note<=24))[0]
+	is_octive_1 = bool((np.mean(diff_note)>=10) and (np.mean(diff_note)<=14))
+	is_octive_2 = bool((np.mean(diff_note)>=-14) and (np.mean(diff_note)<=-10))
+	if is_octive_1:
+		det_note = det_note-12
+	if is_octive_2:
+		det_note = det_note+12
+	is_octive = (is_octive_1 or is_octive_2)
 	count = 0
 	if mode==0:
 		for i,note in enumerate(score_note):
-			if abs(note - det_Note[i])<=1.5:
+			if abs(note - det_note[i])<=1.5:
 				count+=1
-			elif note<=40 and ((det_Note[i]-note)>=10 and (det_Note[i]-note)<=14):
+			elif note<=40 and ((det_note[i]-note)>=10 and (det_note[i]-note)<=14):
 				count+=1
-			elif note>=52 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
+			elif note>=52 and ((note - det_note[i])>=10 and (note - det_note[i])<=14):
 				count+=1
-			elif (note>=40 and note<=52) and (abs(note - det_Note[i])>=10 and abs(note - det_Note[i])<=14):
-				count+=1
-	elif not is_octive and mode==1:
-		count = len(np.where(diff_note<=1.5)[0])
-	elif is_octive and mode==1:
-		for i,note in enumerate(score_note):
-			if note<40 and ((det_Note[i]-note)>=10 and (det_Note[i]-note)<=14):
-				count+=1
-			elif note>52 and ((note - det_Note[i])>=10 and (note - det_Note[i])<=14):
-				count+=1
-			elif (note>=40 and note<=52) and (abs(note - det_Note[i])>=10 and abs(note - det_Note[i])<=14):
-				count+=1
+	elif mode==1:
+		count = len(np.where(np.abs(diff_note)<=1.5)[0])
+
 	score = count *100.0 / len(score_note)
 	return score,is_octive
 
@@ -198,6 +189,8 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 	score,is_octive= 0,False
 	if len(det_Note)>0:
 		score,is_octive = give_score(det_Note,score_note,mode)
+		for note in det_Note:
+			print note
 	results = {
 		'score':score,
 		'is_octive':is_octive,
