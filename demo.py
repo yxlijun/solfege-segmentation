@@ -49,7 +49,7 @@ if __name__=='__main__':
 	wav_file = [os.path.join(root_path,file) for file in os.listdir(root_path) if file.endswith("mp3") or file.endswith("wav")]
 	input_json = 'input.json'
 	output_json = 'output.json'
-	mode = 1
+	mode = 0
 	_main(wav_file[0],input_json,output_json,mode)
 
 

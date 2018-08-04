@@ -126,24 +126,29 @@ def give_score(det_Note,score_note,mode):
 	is_octive_1 = bool((np.mean(diff_note)>=10) and (np.mean(diff_note)<=14))
 	is_octive_2 = bool((np.mean(diff_note)>=-14) and (np.mean(diff_note)<=-10))
 	if is_octive_1:
-		det_note = det_note-12
+		_det_note = det_note-12
 	if is_octive_2:
-		det_note = det_note+12
+		_det_note = det_note+12
 	is_octive = (is_octive_1 or is_octive_2)
 	count = 0
+	LowOctive = list()
 	if mode==0:
 		for i,note in enumerate(score_note):
-			if abs(note - det_note[i])<=1.5:
+			if abs(note - _det_note[i])<=1.5 or \
+			(note<=40 and ((_det_note[i]-note)>=10 and (_det_note[i]-note)<=14)) or \
+			(note>=52 and ((note - _det_note[i])>=10 and (note - _det_note[i])<=14)):
 				count+=1
-			elif note<=40 and ((det_note[i]-note)>=10 and (det_note[i]-note)<=14):
-				count+=1
+			if note<=40 and ((det_note[i]-note)>=10 and (det_note[i]-note)<=14):
+				LowOctive.append(1)
 			elif note>=52 and ((note - det_note[i])>=10 and (note - det_note[i])<=14):
-				count+=1
+				LowOctive.append(-1)
+			else:
+				LowOctive.append(0)
 	elif mode==1:
 		count = len(np.where(np.abs(diff_note)<=1.5)[0])
 
 	score = count *100.0 / len(score_note)
-	return score,is_octive
+	return score,is_octive,LowOctive
 
 
 def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
@@ -188,9 +193,9 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 			#print 'kesy ........3'
 	score,is_octive= 0,False
 	if len(det_Note)>0:
-		score,is_octive = give_score(det_Note,score_note,mode)
-		for note in det_Note:
-			print note
+		score,is_octive,LowOctive = give_score(det_Note,score_note,mode)
+	for i in range(len(result_info)):
+		result_info[i]['octive'] = LowOctive[i]
 	results = {
 		'score':score,
 		'is_octive':is_octive,
