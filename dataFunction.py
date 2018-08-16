@@ -6,13 +6,14 @@ import numpy as np
 #import matplotlib.pyplot as plt
 from utils.parameters import hopsize_t
 from utils.utilFunctions import flag_pause
-from utils.Dtw import detNote_map_score,detNote_map_score_code,detNote_insert_score,detNote_insert_score_LLY
+from utils.Dtw import detNote_insert_score_LLY
 
 sample_ratio = 0.3
 
 
+
 def filter_pitch(pitches,score_note,paddingzero=False):
-	max_note,min_note = 60,20
+	max_note,min_note = 60,25
 	pitches = np.array(pitches)
 	pitches[np.where(pitches>max_note)[0]] = 0.0
 	pitches[np.where(pitches<min_note)[0]] = 0.0
@@ -43,6 +44,7 @@ def process_pitch(pitches,onset_frame,score_note):
 		pitch_info = {}
 		cur_offset_frame = offset_frame[idx]
 		pitch = pitches[cur_onset_frame:cur_offset_frame]
+		pitch = smooth_and_pitches(pitch)
 		voiced_length = flag_pause(pitch)
 		pitch_info['onset'] = cur_onset_frame
 		pitch_info['flag'] = voiced_length
@@ -57,7 +59,7 @@ def pitch_Note(pitches,onset_frame,score_note):
 	det_onsets = []
 	for _info in result_info:
 		loc_flag = _info['flag']
-		pitches = np.array(_info['pitches'][:loc_flag],dtype=int)
+		pitches = np.round(np.array(_info['pitches'][:loc_flag])).astype(int)
 		pitches = pitches[np.where(pitches>20)[0]]
 		unique_pitch = np.unique(pitches)
 		number_dict = {}
@@ -77,26 +79,42 @@ def pitch_Note(pitches,onset_frame,score_note):
 def find_flag(pitches):
 	flag = 0
 	for i,pitch in enumerate(pitches):
-	    if pitch>=20:
+	    if pitch>=24:
 	        flag = i+1
 	return flag
+
+def smooth_and_pitches(pitches):
+	_pitches = pitches.astype(int)
+	indices = np.where(_pitches>25)[0]
+	std_pitches = _pitches[indices]
+	counts = np.bincount(std_pitches)
+	if len(counts)>0:
+		mode_pitch = np.argmax(counts)
+		for i,pitch in enumerate(_pitches):
+		    pitches[i] = mode_pitch if abs(pitch - mode_pitch)>8 and pitch>20 else pitches[i]
+	return pitches
 
 
 def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZero=[]):
 	result_info = []
 	det_Note = []
+	paddingzero_frame = []
 	for idx,cur_onset_frame in enumerate(onset_frame):
 		paddingzero = True if idx in pauseLoc else False
 		pitch_info = {}
 		if idx in equalZero:
+			paddingzero_frame.append(cur_onset_frame)
 			pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
-			pitch_info['flag'] = 0
-			pitch_info['pitches'] = np.zeros(10).tolist()
+			pitch =  np.zeros(10)
+			pitch = filter_pitch(pitch,score_note,paddingzero)
+			pitch_info['pitches'] = pitch
+			pitch_info['flag'] = 10 if len(pitch)>10 else 0
 			result_info.append(pitch_info)
 			det_Note.append(0.0)
 		else:
 			cur_offset_frame = offset_frame[idx]
 			pitch = pitches[cur_onset_frame:cur_offset_frame]
+			pitch = smooth_and_pitches(pitch)
 			voiced_length = flag_pause(pitch)
 			slience_length = len(pitch)-voiced_length
 			sample_voice_length = int(voiced_length*sample_ratio)
@@ -115,7 +133,7 @@ def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZe
 			note = np.array(pitch[:flag])
 			det_Note.append(np.mean(note))
 
-	return result_info,det_Note
+	return result_info,det_Note,paddingzero_frame
 
 
 def give_score(det_Note,score_note,mode):
@@ -123,12 +141,14 @@ def give_score(det_Note,score_note,mode):
 	score_note = np.array(score_note)
 	diff_note = (det_note - score_note).astype(np.int)
 	indices = np.where((diff_note>=-24) & (diff_note<=24))[0]
-	is_octive_1 = bool((np.mean(diff_note)>=10) and (np.mean(diff_note)<=14))
-	is_octive_2 = bool((np.mean(diff_note)>=-14) and (np.mean(diff_note)<=-10))
+	is_octive_1 = bool((np.mean(diff_note[indices])>=10) and (np.mean(diff_note[indices])<=14))
+	is_octive_2 = bool((np.mean(diff_note[indices])>=-14) and (np.mean(diff_note[indices])<=-10))
 	if is_octive_1:
 		_det_note = det_note-12
-	if is_octive_2:
+	elif is_octive_2:
 		_det_note = det_note+12
+	else:
+		_det_note = det_note
 	is_octive = (is_octive_1 or is_octive_2)
 	count = 0
 	LowOctive = list()
@@ -138,12 +158,20 @@ def give_score(det_Note,score_note,mode):
 			(note<=40 and ((_det_note[i]-note)>=10 and (_det_note[i]-note)<=14)) or \
 			(note>=52 and ((note - _det_note[i])>=10 and (note - _det_note[i])<=14)):
 				count+=1
-			if note<=40 and ((det_note[i]-note)>=10 and (det_note[i]-note)<=14):
-				LowOctive.append(1)
-			elif note>=52 and ((note - det_note[i])>=10 and (note - det_note[i])<=14):
-				LowOctive.append(-1)
+			if is_octive:
+				if ((det_note[i]-note)>=10 and (det_note[i]-note)<=14):
+					LowOctive.append(1)
+				elif ((note - det_note[i])>=10 and (note - det_note[i])<=14):
+					LowOctive.append(-1)
+				else:
+					LowOctive.append(0)
 			else:
-				LowOctive.append(0)
+				if note<=40 and ((det_note[i]-note)>=10 and (det_note[i]-note)<=14):
+					LowOctive.append(1)
+				elif note>=52 and ((note - det_note[i])>=10 and (note - det_note[i])<=14):
+					LowOctive.append(-1)
+				else:
+					LowOctive.append(0)
 	elif mode==1:
 		count = len(np.where(np.abs(diff_note)<=1.5)[0])
 
@@ -154,43 +182,27 @@ def give_score(det_Note,score_note,mode):
 def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 	result_info = []
 	det_Note = []
+
 	discardData = (len(score_note)-len(onset_frame))>0.15*len(score_note)
 	if discardData:
 		pass
 	elif len(onset_frame)==len(score_note):
 		offset_frame = onset_frame[1:]
 		offset_frame = np.append(offset_frame,len(pitches)-1)
-		result_info,det_Note = get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc)
+		result_info,det_Note,paddingzero_frame = get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc)
 		#print "keys .......1"
 	else:
 		Note_and_onset = pitch_Note(pitches,onset_frame,score_note)
-		#modify_onset =  detNote_map_score_code(pitches,score_note,onset_frame)
-		#modify_onset = detNote_insert_score(pitches,score_note,onset_frame)
 		modify_onset = detNote_insert_score_LLY(pitches,score_note,onset_frame)
 		equalZero = np.where(modify_onset==0)[0]
 		offset_frame = []
-
-		
-		if len(equalZero)>(len(score_note)-len(onset_frame)):
-			offset_frame_temp = []
-			samescore_length_onsets = detNote_map_score(Note_and_onset,score_note)
-			for i in range(1,len(samescore_length_onsets)):
-				for j in range(i,len(samescore_length_onsets)):
-					if samescore_length_onsets[j]-samescore_length_onsets[i-1]>0:
-						offset_frame_temp.append(samescore_length_onsets[j])
-						break
-			offset_frame_temp.append(len(pitches)-1)
-			offset_frame = np.array(offset_frame_temp)
-			result_info,det_Note = get_result_info(samescore_length_onsets,offset_frame,pitches,pauseLoc)
-			#print "keys .......2"
-		else:
-			for i in range(1,len(modify_onset)-1):
-				if modify_onset[i] == 0:
-					modify_onset[i] = int((modify_onset[i-1]+modify_onset[i+1])/2)
-			offset_frame = modify_onset[1:]
-			offset_frame = np.append(offset_frame,len(pitches)-1)
-			result_info,det_Note = get_result_info(modify_onset,offset_frame,pitches,score_note,pauseLoc,equalZero)
-			#print 'kesy ........3'
+		for i in range(1,len(modify_onset)-1):
+			if modify_onset[i] == 0:
+				modify_onset[i] = int((modify_onset[i-1]+modify_onset[i+1])/2)
+		offset_frame = modify_onset[1:]
+		offset_frame = np.append(offset_frame,len(pitches)-1)
+		result_info,det_Note,paddingzero_frame = get_result_info(modify_onset,offset_frame,pitches,score_note,pauseLoc,equalZero)
+		#print 'kesy ........2'
 	score,is_octive= 0,False
 	if len(det_Note)>0:
 		score,is_octive,LowOctive = give_score(det_Note,score_note,mode)
@@ -204,8 +216,59 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 	with open(filename,'w') as f:
 		json.dump(results,f)
 	print('score:',score)
-	return result_info
+	return results,paddingzero_frame
 
+
+def post_proprocess(filename,pitches,onset_frame,score_note,pauseLoc,result_loc_info,mode):
+	result_info = []
+	det_Note = []
+
+	discardData = (len(score_note)-len(onset_frame))>0.15*len(score_note)
+	if discardData:
+		pass
+	else:
+		modify_onset = []
+		modify_index = []
+		pading_zero_loc = result_loc_info['zero_loc']
+		locate_info = result_loc_info['loc_info']
+		for i,info in enumerate(locate_info):
+			if i not in pading_zero_loc:
+				modify_onset.append(onset_frame[info[0]])
+				modify_index.append(i)
+
+		modify_onset = sorted(modify_onset)
+		modify_index = np.array(modify_index)
+		add_onset = []
+		for i in pading_zero_loc:
+			if i==0:
+				modify_onset.append(1)
+			else:
+				insert_index1 = np.where(modify_index>i)[0]
+				insert_index2 = np.where(modify_index<i)[0]
+				if len(insert_index1)>0 and len(insert_index2)>0:
+					modify_onset.append((modify_onset[insert_index1[0]]+modify_onset[insert_index2[-1]])//2)
+				elif len(insert_index1)==0:
+					modify_onset.append(modify_onset[-1]+20)
+			modify_onset =  sorted(modify_onset)
+		
+		offset_frame = modify_onset[1:]
+		offset_frame = np.append(offset_frame,len(pitches)-1)
+		result_info,det_Note,paddingzero_frame = get_result_info(modify_onset,offset_frame,pitches,score_note,pauseLoc,pading_zero_loc)
+
+	score,is_octive= 0,False
+	if len(det_Note)>0:
+		score,is_octive,LowOctive = give_score(det_Note,score_note,mode)
+	for i in range(len(result_info)):
+		result_info[i]['octive'] = LowOctive[i]
+	results = {
+		'score':score,
+		'is_octive':is_octive,
+		'pitches_info':result_info
+	}
+	with open(filename,'w') as f:
+		json.dump(results,f)
+	print('score:',score)
+	return results,paddingzero_frame
 
 def parse_musescore(filename):
 	with open(filename,'r') as fr:
