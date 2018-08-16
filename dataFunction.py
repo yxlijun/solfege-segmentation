@@ -247,9 +247,11 @@ def post_proprocess(filename,pitches,onset_frame,score_note,pauseLoc,result_loc_
 				insert_index2 = np.where(modify_index<i)[0]
 				if len(insert_index1)>0 and len(insert_index2)>0:
 					modify_onset.append((modify_onset[insert_index1[0]]+modify_onset[insert_index2[-1]])//2)
+					modify_index = np.append(modify_index,i)
 				elif len(insert_index1)==0:
 					modify_onset.append(modify_onset[-1]+20)
 			modify_onset =  sorted(modify_onset)
+			modify_index = np.sort(modify_index)
 		
 		offset_frame = modify_onset[1:]
 		offset_frame = np.append(offset_frame,len(pitches)-1)
