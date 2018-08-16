@@ -26,12 +26,12 @@ def callHamming():
         hammingWindow[i] = float(0.54-0.46*math.cos(2*math.pi*i/(windowLength-1)))
 
 class MFSHS(object):
-    frequency = []
-    pitch = []
-    spectrum = []
     def __init__(self,audio_data):
         super(MFSHS, self).__init__()
         self.audio_data = audio_data
+        self.frequency = []
+        self.pitch = []
+        self.spectrum = []
 
     def frame(self):
         y = np.zeros(frameSize/2)
