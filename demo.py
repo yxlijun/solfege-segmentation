@@ -9,7 +9,8 @@ from utils.parameters import hopsize_t
 from utils.utilFunctions import smooth_obs
 from utils.peakDetection import findPeak
 from pitchDetection.mfshs import MFSHS
-from dataFunction import saveJson,parse_musescore
+from dataFunction import saveJson,parse_musescore,pitch_Note,post_proprocess
+from alignment import sw_alignment
 import warnings
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -40,8 +41,13 @@ def _main(wav_file,input_json,output_json,mode):
 
 	#print sf_onset_frame
 	score_note,pauseLoc = parse_musescore(input_json)
-	resultOnset = findPeak(obs_syllable,frequency,pitches,len(score_note))
-	result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,mode)
+	resultOnset = findPeak(obs_syllable,frequency,pitches,score_note)
+	Note_and_onset = pitch_Note(pitches,resultOnset['onset_frame'],score_note)
+	score_note = np.array(score_note)
+	result_loc_info = sw_alignment(score_note,Note_and_onset['notes'])
+
+	#result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,mode)
+	result_info,paddingzero_frame = post_proprocess(output_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,result_loc_info,mode)
 
 
 if __name__=='__main__':
