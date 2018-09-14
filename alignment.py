@@ -1,5 +1,4 @@
 #-*- coding:utf-8 -*-
-
 import numpy as np 
 
 MATCH_COST = 0
@@ -7,6 +6,11 @@ INSERT_COST = 1
 DELETE_COST = 2
 
 def sw_alignment(score_note,det_note):
+	if (len(score_note)-len(det_note))>0.15*len(score_note):
+		return {
+		'loc_info':[],
+		'zero_loc':[]
+	}
 	det_note = np.array(det_note)
 	score_diff = score_note[1:]-score_note[0:-1]
 	_lt = np.where(score_diff<0)[0]
@@ -112,11 +116,6 @@ def locate(ref_str,query_str,sw_ref_str,sw_query_str):
 		locate_info[10000-zero_loc] = zero_loc
 
 	locate_info = sorted(locate_info.items(), lambda x, y: cmp(x[1], y[1]))
-
-	#print(len(locate_info))
-	#print(pading_zero_loc)
-	#print(delte_loc)
-	#print(len(locate_info))
 	result_loc_info = {
 		'loc_info':locate_info,
 		'zero_loc':pading_zero_loc

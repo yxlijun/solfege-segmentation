@@ -24,7 +24,7 @@ import time
 
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-os.environ["CUDA_VISIBLE_DEVICES"] = "2"
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 
 
 score_json_name=['1A_35','1A_22','C_01','C_02','C_03',
@@ -35,42 +35,49 @@ wav_files,score_json = [],[]
 est_files = []
 def _main(wav_file,score_file,est_file=None):
 	print(wav_file)
-	start_time = time.time()
 	data_wav, fs_wav = librosa.load(wav_file,sr=44100)
+	#start_time = time.time()
+	start_time = time.time()
+	
 	mfshs = MFSHS(data_wav)
-	pitchResult = mfshs.frame()
-	pitches = np.array(pitchResult['pitch'])
-	frequency = np.array(pitchResult['frequency'])
-	#print 'pitch detection time:',time.time()-start_time
+	mfshs.frame()
+
+	print("mfshe time :",time.time()-start_time)
+	pitches = mfshs.pitches
+	#print('pitch detection time:',time.time()-start_time)
 
 	root_path = os.path.join(os.path.dirname(__file__))
 	joint_cnn_model_path = os.path.join(root_path, 'cnnModels', 'joint')
 
-	start_time = time.time()
+
+
 	# load keras joint cnn model
 	model_joint = load_model(os.path.join(joint_cnn_model_path, 'jan_joint0.h5'))
 	# load log mel feature scaler
 	scaler_joint = pickle.load(open(os.path.join(joint_cnn_model_path, 'scaler_joint.pkl'), 'rb'))
 
+
 	log_mel_old = get_log_mel_madmom(wav_file, fs=fs_wav, hopsize_t=hopsize_t, channel=1)
 	log_mel = scaler_joint.transform(log_mel_old)
 	log_mel = feature_reshape(log_mel, nlen=7)
 	log_mel = np.expand_dims(log_mel, axis=1)
-	obs_syllable, obs_phoneme = model_joint.predict(log_mel, batch_size=128, verbose=2)
 
-	#print 'cnn detection time: ',time.time()-start_time
+	#start_time = time.time()
+	obs_syllable, obs_phoneme = model_joint.predict(log_mel, batch_size=128, verbose=2)
+	#print('cnn detection time: ',time.time()-start_time)
+
 	obs_syllable = np.squeeze(obs_syllable)
 	obs_syllable = smooth_obs(obs_syllable)
 	obs_syllable[0] = 1.0
 	obs_syllable[-1] = 0.0
 
-	start_time = time.time()
+	#start_time = time.time()
 
 	score_note,pauseLoc = parse_musescore(score_file)
 
-	resultOnset = findPeak(obs_syllable,frequency,pitches,score_note,est_file)
+	resultOnset = findPeak(obs_syllable,pitches,score_note,est_file)
 	filename_json = os.path.splitext(wav_file)[0]+".json"
-	#print 'post-processing time :' ,time.time()-start_time
+	#print('post-processing time :' ,time.time()-start_time)
 
 	Note_and_onset = pitch_Note(pitches,resultOnset['onset_frame'],score_note)
 
@@ -80,6 +87,7 @@ def _main(wav_file,score_file,est_file=None):
 	#result_info,paddingzero_frame = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,0)
 	result_info,paddingzero_frame = post_proprocess(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,result_loc_info,0)
 
+	print("total time:",time.time()-start_time)
 
 	filename_pitch = os.path.splitext(wav_file)[0]+"_pitch.txt"
 	mfshs.saveArray(filename_pitch,pitches)
@@ -90,8 +98,8 @@ def _main(wav_file,score_file,est_file=None):
 	filename_detnote = os.path.splitext(wav_file)[0]+"_detnote.txt"
 	mfshs.saveArray(filename_detnote,Note_and_onset['notes'])
 
-	filename_img = os.path.splitext(wav_file)[0]+"_oriest.jpg"
-	draw_result(pitches,resultOnset['onset_frame'],paddingzero_frame,filename_img)
+	#filename_img = os.path.splitext(wav_file)[0]+"_oriest.jpg"
+	#draw_result(pitches,resultOnset['onset_frame'],paddingzero_frame,filename_img)
 	return result_info['score']
 
 
@@ -145,13 +153,24 @@ def draw_result(pitches,onset_frame,paddingzero_frame,filename_img):
 
 
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','test')
-	get_file(root_path)
-	total_score = []
-	for i in range(len(wav_files)):
-		score = _main(wav_files[i],score_json[i],est_files[i])
-	#score = _main(wav_files[20],score_json[20])
+	from multiprocessing import Process,Manager
+	from timeit import Timer
 
+
+	root_path = os.path.join(os.path.dirname(__file__),'data','test','20')
+	get_file(root_path)
+	
+	
+	#process_list = []
+	for i in range(len(wav_files)):
+		score = _main(wav_files[i],score_json[i])
+		'''
+		p = Process(target=_main,args=(wav_files[i],score_json[i]))
+		p.start()
+		process_list.append(p)
+	for process in process_list:
+		process.join()
+	'''
 
 
 

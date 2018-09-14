@@ -220,9 +220,8 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 
 
 def post_proprocess(filename,pitches,onset_frame,score_note,pauseLoc,result_loc_info,mode):
-	result_info = []
-	det_Note = []
-
+	result_info,det_Note = [],[]
+	paddingzero_frame = []
 	discardData = (len(score_note)-len(onset_frame))>0.15*len(score_note)
 	if discardData:
 		pass

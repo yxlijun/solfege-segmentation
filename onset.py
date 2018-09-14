@@ -6,6 +6,12 @@ import tensorflow as tf
 import numpy as np 
 import math 
 import time 
+import os
+
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+os.environ["CUDA_VISIBLE_DEVICES"] = "0"
+
 
 hopsize = 512
 frameSize = 4096
@@ -128,7 +134,7 @@ class onset_classifier(object):
 
 
 if __name__=='__main__':
-	data_wav, fs_wav = librosa.load("./data/93/93.mp3",sr=44100)
+	data_wav, fs_wav = librosa.load("./data/9.3/1/1.mp3",sr=44100)
 	onset_detector = onset_classifier('./cnnModels/frozen_fft_onset.pb',data_wav)
 	input_data = np.random.randn(1,512,9)
 	onset_detector.detect()

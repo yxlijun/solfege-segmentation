@@ -25,9 +25,9 @@ def _main(wav_file,input_json,output_json,mode):
 	scaler_joint = pickle.load(open(os.path.join(joint_cnn_model_path, 'scaler_joint.pkl'), 'rb'))
 	data_wav, fs_wav = librosa.load(wav_file,sr=44100)
 	mfshs = MFSHS(data_wav)
-	pitchResult = mfshs.frame()
-	pitches = np.array(pitchResult['pitch'])
-	frequency = np.array(pitchResult['frequency'])
+	mfshs.frame()
+	pitches = mfshs.pitches
+	#frequency = np.array(pitchResult['frequency'])
 
 	log_mel_old = get_log_mel_madmom(wav_file, fs=fs_wav, hopsize_t=hopsize_t, channel=1)
 	log_mel = scaler_joint.transform(log_mel_old)
@@ -41,7 +41,7 @@ def _main(wav_file,input_json,output_json,mode):
 
 	#print sf_onset_frame
 	score_note,pauseLoc = parse_musescore(input_json)
-	resultOnset = findPeak(obs_syllable,frequency,pitches,score_note)
+	resultOnset = findPeak(obs_syllable,pitches,score_note)
 	Note_and_onset = pitch_Note(pitches,resultOnset['onset_frame'],score_note)
 	score_note = np.array(score_note)
 	result_loc_info = sw_alignment(score_note,Note_and_onset['notes'])

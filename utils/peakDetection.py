@@ -39,15 +39,14 @@ def smooth_pitches(_pitches):
 				dpitches[i+indices[2]] = dpitches[i+indices[0]]
 		return dpitches
 
-def findPeak(obs_syllable,frequency,pitches,score_note,est_file=None):
+def findPeak(obs_syllable,pitches,score_note,est_file=None):
 	obs_syllable=obs_syllable*100
 	peak = collections.OrderedDict()
 	score_length = len(score_note)
 	for idx in range(1,len(obs_syllable)-1):
 		if (obs_syllable[idx]-obs_syllable[idx-1]>0) and (obs_syllable[idx]-obs_syllable[idx+1]>0) and (obs_syllable[idx]>1.5):
 			peak[idx] = obs_syllable[idx]
-
-	if len(peak.keys())==0:
+	if len(peak.keys())<2:
 		result_info = {'onset_frame':[],'onset_time':[]}
 		return result_info
 	onset_1 = []
@@ -62,6 +61,7 @@ def findPeak(obs_syllable,frequency,pitches,score_note,est_file=None):
 	else:
 		syllable_onset = peak.keys()[0:-1]
 		syllable_offset = peak.keys()[1:]
+
 	syllable_onset.append(syllable_offset[-1])
 	syllable_offset.append(len(obs_syllable)-1)
 	realOnset = []
