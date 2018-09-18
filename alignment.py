@@ -33,7 +33,11 @@ def sw_alignment(score_note,det_note):
 		query_str+=str(x)
 	for x in score_diff:
 		ref_str+=str(x)
+	query_str+=str(2)
+	ref_str+=str(2)
 	sw_ref_str,sw_query_str = WaterMan(ref_str,query_str)
+	#print sw_ref_str
+	#print sw_query_str
 	result_loc_info = locate(ref_str,query_str,sw_ref_str,sw_query_str)
 	return result_loc_info
 
@@ -109,7 +113,7 @@ def locate(ref_str,query_str,sw_ref_str,sw_query_str):
 			delte_loc.append(loc_query)
 
 	values = locate_info.values()
-	for i in range(len(ref_str)+1):
+	for i in range(len(ref_str)):
 		if (i not in values) and (i not in pading_zero_loc):
 			pading_zero_loc.append(i)
 	for zero_loc in pading_zero_loc:
