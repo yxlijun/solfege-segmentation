@@ -100,7 +100,7 @@ class MFSHS(object):
 
     @property
     def pitches(self):
-        return np.array(self.pitch.values())
+        return np.round(np.array(self.pitch.values()),2)
     
 
 

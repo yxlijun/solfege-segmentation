@@ -1,14 +1,13 @@
 from __future__ import division
 from __future__ import print_function
+from __future__ import absolute_import
 import os 
 import pickle
-import librosa
 import time 
-import collections
-import madmom
+import warnings
+import librosa
 import numpy as np
-import soundfile as sf
-import matplotlib.pyplot as plt
+
 from keras.models import load_model
 from audio_preprocessing import get_log_mel_madmom
 from audio_preprocessing import feature_reshape
@@ -19,8 +18,6 @@ from utils.peakDetection import findPeak,smooth_pitches
 from pitchDetection.mfshs import MFSHS
 from dataFunction import saveJson,parse_musescore,pitch_Note,post_proprocess
 from alignment import sw_alignment
-import warnings
-import time
 
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -42,14 +39,11 @@ def _main(wav_file,score_file,est_file=None):
 	mfshs = MFSHS(data_wav)
 	mfshs.frame()
 
-	print("mfshe time :",time.time()-start_time)
 	pitches = mfshs.pitches
 	#print('pitch detection time:',time.time()-start_time)
 
 	root_path = os.path.join(os.path.dirname(__file__))
 	joint_cnn_model_path = os.path.join(root_path, 'cnnModels', 'joint')
-
-
 
 	# load keras joint cnn model
 	model_joint = load_model(os.path.join(joint_cnn_model_path, 'jan_joint0.h5'))
@@ -78,17 +72,18 @@ def _main(wav_file,score_file,est_file=None):
 	resultOnset = findPeak(obs_syllable,pitches,score_note,est_file)
 	filename_json = os.path.splitext(wav_file)[0]+".json"
 	#print('post-processing time :' ,time.time()-start_time)
-
+	#resultOnset['onset_frame'] = read_txt()
+	
 	Note_and_onset = pitch_Note(pitches,resultOnset['onset_frame'],score_note)
 
 	score_note = np.array(score_note)
 	result_loc_info = sw_alignment(score_note,Note_and_onset['notes'])
 
 	#result_info,paddingzero_frame = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,0)
-	result_info,paddingzero_frame = post_proprocess(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,result_loc_info,0)
+	result_info,det_note = post_proprocess(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,result_loc_info,0)
 
-	print("total time:",time.time()-start_time)
-
+	#print("total time:",time.time()-start_time)
+	det_note = np.round(det_note,2)
 	filename_pitch = os.path.splitext(wav_file)[0]+"_pitch.txt"
 	mfshs.saveArray(filename_pitch,pitches)
 	filename_onset = os.path.splitext(wav_file)[0]+"_onset.txt"
@@ -96,12 +91,19 @@ def _main(wav_file,score_file,est_file=None):
 	filename_score = os.path.splitext(wav_file)[0]+"_score.txt"
 	mfshs.saveArray(filename_score,score_note)
 	filename_detnote = os.path.splitext(wav_file)[0]+"_detnote.txt"
-	mfshs.saveArray(filename_detnote,Note_and_onset['notes'])
+	mfshs.saveArray(filename_detnote,det_note)
 
-	#filename_img = os.path.splitext(wav_file)[0]+"_oriest.jpg"
-	#draw_result(pitches,resultOnset['onset_frame'],paddingzero_frame,filename_img)
 	return result_info['score']
 
+
+def read_txt():
+	filename = './data/9.18/piano/1/real.txt'
+	with open(filename,'r') as fr:
+		lines = fr.readlines()
+	onsets = []
+	for line in lines:
+		onsets.append(int(float(line)*100))
+	return onsets
 
 def get_file(root_path):
 	path_list = [os.path.join(root_path,file) for file in os.listdir(root_path)]
@@ -118,59 +120,12 @@ def get_file(root_path):
 				if filename in score_json_name:
 					score_json.append(path)
 
-def draw_result(pitches,onset_frame,paddingzero_frame,filename_img):
-	det_pitch = np.zeros(len(pitches))    
-	offset_frame = onset_frame[1:]
-	offset_frame = np.append(offset_frame,len(pitches))
-
-	for idx,cur_onset_frame in enumerate(onset_frame):
-		cur_offset_frame = offset_frame[idx]
-		pitch = pitches[cur_onset_frame:cur_offset_frame]
-		det_pitch[cur_onset_frame:cur_offset_frame] = pitch
-
-	onset_time = []
-	for i in range(len(pitches)):
-		if i in onset_frame:
-			onset_time.append(100)
-		else:
-			onset_time.append(0)
-
-	add_onset_time = []
-	for i in range(len(pitches)):
-		if i in paddingzero_frame:
-			add_onset_time.append(100)
-		else:
-			add_onset_time.append(0)
-
-	fig = plt.figure()
-	plt.scatter(range(len(pitches)), pitches, color = 'r', s = 10,marker = '.',linewidths=0.001)
-	plt.plot(range(len(pitches)),onset_time,color='g')
-	plt.plot(range(len(pitches)),add_onset_time,color='b')
-
-	#plt.show()
-	plt.savefig(filename_img)
-
-
 
 if __name__=='__main__':
-	from multiprocessing import Process,Manager
-	from timeit import Timer
-
-
-	root_path = os.path.join(os.path.dirname(__file__),'data','test','20')
+	root_path = os.path.join(os.path.dirname(__file__),'data','9_20')
 	get_file(root_path)
-	
-	
-	#process_list = []
 	for i in range(len(wav_files)):
 		score = _main(wav_files[i],score_json[i])
-		'''
-		p = Process(target=_main,args=(wav_files[i],score_json[i]))
-		p.start()
-		process_list.append(p)
-	for process in process_list:
-		process.join()
-	'''
 
 
 
