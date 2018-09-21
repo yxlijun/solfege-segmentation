@@ -250,13 +250,13 @@ def post_proprocess(filename,pitches,onset_frame,zeroAmploc,score_note,pauseLoc,
 			if i not in pading_zero_loc:
 				modify_onset.append(onset_frame[info[0]])
 				modify_index.append(i)
-
 		modify_onset = sorted(modify_onset)
 		modify_index = np.array(modify_index)
 		add_onset = []
 		for i in pading_zero_loc:
 			if i==0:
 				modify_onset.append(1)
+				modify_index = np.append(modify_index,0)
 			else:
 				insert_index1 = np.where(modify_index>i)[0]
 				insert_index2 = np.where(modify_index<i)[0]
@@ -267,7 +267,6 @@ def post_proprocess(filename,pitches,onset_frame,zeroAmploc,score_note,pauseLoc,
 					modify_onset.append(modify_onset[-1]+20)
 			modify_onset =  sorted(modify_onset)
 			modify_index = np.sort(modify_index)
-		
 		offset_frame = modify_onset[1:]
 		offset_frame = np.append(offset_frame,len(pitches)-1)
 		result_info,det_Note,paddingzero_frame = get_result_info(modify_onset,offset_frame,zeroAmploc,pitches,score_note,pauseLoc,pading_zero_loc)
