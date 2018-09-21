@@ -94,8 +94,13 @@ def smooth_and_pitches(pitches):
 		    pitches[i] = mode_pitch if abs(pitch - mode_pitch)>8 and pitch>20 else pitches[i]
 	return pitches
 
+def find_ZeroAmp_frame(onset,offset,zeroAmploc):
+	amp_loc = zeroAmploc[np.where((zeroAmploc>onset) &(zeroAmploc<offset))[0]]
+	first_amp_loc = (amp_loc[0]-onset-1) if len(amp_loc)>0 else 0
+	return first_amp_loc
 
-def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZero=[]):
+
+def get_result_info(onset_frame,offset_frame,zeroAmploc,pitches,score_note,pauseLoc,equalZero=[]):
 	result_info = []
 	det_Note = []
 	paddingzero_frame = []
@@ -114,18 +119,28 @@ def get_result_info(onset_frame,offset_frame,pitches,score_note,pauseLoc,equalZe
 		else:
 			cur_offset_frame = offset_frame[idx]
 			pitch = pitches[cur_onset_frame:cur_offset_frame]
+			first_amp_loc = find_ZeroAmp_frame(cur_onset_frame,cur_offset_frame,zeroAmploc)
 			pitch = smooth_and_pitches(pitch)
 			voiced_length = flag_pause(pitch)
+			noisy_length = (first_amp_loc - voiced_length) if(first_amp_loc - voiced_length)>0 else 0
+			voiced_length +=noisy_length
 			slience_length = len(pitch)-voiced_length
 			sample_voice_length = int(voiced_length*sample_ratio)
 			sameple_slience_length = int(slience_length*sample_ratio)
 			voice_indices = np.random.permutation(sample_voice_length)
 			slience_indices = np.random.permutation(sameple_slience_length)
 			voiced_pitch = pitch[:voiced_length][voice_indices]
-			slience_pitch = pitch[voiced_length:][slience_indices]
+			#slience_pitch = pitch[voiced_length:][slience_indices]
+			slience_pitch = np.zeros(sameple_slience_length)
 			pitch = np.append(voiced_pitch,slience_pitch).tolist()
 			pitch = filter_pitch(pitch,score_note,paddingzero)
-			flag = find_flag(pitch)
+			#flag = find_flag(pitch)
+			if (len(pitch)-sample_voice_length)<15:
+				pitch = pitch[0:sample_voice_length]
+			else:
+				zero_pitch = np.zeros(len(pitch)-sample_voice_length).tolist()
+				pitch[sample_voice_length:] = zero_pitch
+			flag = sample_voice_length
 			pitch_info['onset'] = cur_onset_frame*hopsize_t*1000
 			pitch_info['flag'] = flag
 			pitch_info['pitches'] = pitch
@@ -216,10 +231,11 @@ def saveJson(filename,pitches,onset_frame,score_note,pauseLoc,mode):
 	with open(filename,'w') as f:
 		json.dump(results,f)
 	print('score:',score)
-	return results,paddingzero_frame
+	return results,det_Note
 
 
-def post_proprocess(filename,pitches,onset_frame,score_note,pauseLoc,result_loc_info,mode):
+
+def post_proprocess(filename,pitches,onset_frame,zeroAmploc,score_note,pauseLoc,result_loc_info,mode):
 	result_info,det_Note = [],[]
 	paddingzero_frame = []
 	discardData = (len(score_note)-len(onset_frame))>0.15*len(score_note)
@@ -254,7 +270,7 @@ def post_proprocess(filename,pitches,onset_frame,score_note,pauseLoc,result_loc_
 		
 		offset_frame = modify_onset[1:]
 		offset_frame = np.append(offset_frame,len(pitches)-1)
-		result_info,det_Note,paddingzero_frame = get_result_info(modify_onset,offset_frame,pitches,score_note,pauseLoc,pading_zero_loc)
+		result_info,det_Note,paddingzero_frame = get_result_info(modify_onset,offset_frame,zeroAmploc,pitches,score_note,pauseLoc,pading_zero_loc)
 
 	score,is_octive= 0,False
 	if len(det_Note)>0:
@@ -269,7 +285,7 @@ def post_proprocess(filename,pitches,onset_frame,score_note,pauseLoc,result_loc_
 	with open(filename,'w') as f:
 		json.dump(results,f)
 	print('score:',score)
-	return results,paddingzero_frame
+	return results,det_Note
 
 def parse_musescore(filename):
 	with open(filename,'r') as fr:

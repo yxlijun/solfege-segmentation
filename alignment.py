@@ -36,8 +36,8 @@ def sw_alignment(score_note,det_note):
 	query_str+=str(2)
 	ref_str+=str(2)
 	sw_ref_str,sw_query_str = WaterMan(ref_str,query_str)
-	print sw_ref_str
-	print sw_query_str
+	#print sw_ref_str
+	#print sw_query_str
 	result_loc_info = locate(ref_str,query_str,sw_ref_str,sw_query_str)
 	return result_loc_info
 

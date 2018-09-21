@@ -19,6 +19,7 @@ from pitchDetection.mfshs import MFSHS
 from dataFunction import saveJson,parse_musescore,pitch_Note,post_proprocess
 from alignment import sw_alignment
 
+from draw import *
 warnings.filterwarnings('ignore')
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 os.environ["CUDA_VISIBLE_DEVICES"] = ""
@@ -40,6 +41,8 @@ def _main(wav_file,score_file,est_file=None):
 	mfshs.frame()
 
 	pitches = mfshs.pitches
+	energes = mfshs.energes
+	zeroAmploc = mfshs.zeroAmploc
 	#print('pitch detection time:',time.time()-start_time)
 
 	root_path = os.path.join(os.path.dirname(__file__))
@@ -72,18 +75,16 @@ def _main(wav_file,score_file,est_file=None):
 	resultOnset = findPeak(obs_syllable,pitches,score_note,est_file)
 	filename_json = os.path.splitext(wav_file)[0]+".json"
 	#print('post-processing time :' ,time.time()-start_time)
-	#resultOnset['onset_frame'] = read_txt()
 	
 	Note_and_onset = pitch_Note(pitches,resultOnset['onset_frame'],score_note)
-
+	#draw_energe(energes,resultOnset['onset_frame'],zeroAmploc)
 	score_note = np.array(score_note)
 	result_loc_info = sw_alignment(score_note,Note_and_onset['notes'])
 
 	#result_info,paddingzero_frame = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,0)
-	result_info,det_note = post_proprocess(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,result_loc_info,0)
+	result_info,det_Note = post_proprocess(filename_json,pitches,resultOnset['onset_frame'],zeroAmploc,score_note,pauseLoc,result_loc_info,0)
 
 	#print("total time:",time.time()-start_time)
-	det_note = np.round(det_note,2)
 	filename_pitch = os.path.splitext(wav_file)[0]+"_pitch.txt"
 	mfshs.saveArray(filename_pitch,pitches)
 	filename_onset = os.path.splitext(wav_file)[0]+"_onset.txt"
@@ -91,19 +92,10 @@ def _main(wav_file,score_file,est_file=None):
 	filename_score = os.path.splitext(wav_file)[0]+"_score.txt"
 	mfshs.saveArray(filename_score,score_note)
 	filename_detnote = os.path.splitext(wav_file)[0]+"_detnote.txt"
-	mfshs.saveArray(filename_detnote,det_note)
+	mfshs.saveArray(filename_detnote,np.round(np.array(det_Note),2))
 
 	return result_info['score']
 
-
-def read_txt():
-	filename = './data/9.18/piano/1/real.txt'
-	with open(filename,'r') as fr:
-		lines = fr.readlines()
-	onsets = []
-	for line in lines:
-		onsets.append(int(float(line)*100))
-	return onsets
 
 def get_file(root_path):
 	path_list = [os.path.join(root_path,file) for file in os.listdir(root_path)]
@@ -121,8 +113,10 @@ def get_file(root_path):
 					score_json.append(path)
 
 
+
+
 if __name__=='__main__':
-	root_path = os.path.join(os.path.dirname(__file__),'data','9_20')
+	root_path = os.path.join(os.path.dirname(__file__),'data','test')
 	get_file(root_path)
 	for i in range(len(wav_files)):
 		score = _main(wav_files[i],score_json[i])

@@ -3,8 +3,6 @@
 import time
 from multiprocessing import Process,Manager,cpu_count
 
-from timeit import Timer
-
 import librosa 
 import numpy as np      
 import os
@@ -36,6 +34,8 @@ class MFSHS(object):
         self.process_num = cpu_count()
         manager = Manager()
         self.pitch = manager.dict()
+        self.energe = manager.dict()
+        self.zeroamploc = manager.dict()
 
         y = np.zeros(frameSize/2)
         x = np.hstack([y,self.audio_data,y])
@@ -63,6 +63,9 @@ class MFSHS(object):
             meanAmp = np.mean(np.abs(self.xFrame[index,:]))
             note = self.getNode(self.xFrame[index,:]) if meanAmp>0.005 else 0
             self.pitch[index] = note
+            self.energe[index] = meanAmp
+            if meanAmp<=0.005:
+                self.zeroamploc[index] = index
 
 
     def getNode(self,data):
@@ -102,7 +105,14 @@ class MFSHS(object):
     def pitches(self):
         return np.round(np.array(self.pitch.values()),2)
     
+    @property
+    def energes(self):
+        return np.round(np.array(self.energe.values()),3)
 
+
+    @property
+    def zeroAmploc(self):
+        return np.array(self.zeroamploc.values())
 
     def saveArray(self,filename,Array_list):
         with open(filename,"w") as f:
@@ -110,4 +120,6 @@ class MFSHS(object):
                 f.write(str(arr)+"\n")
 
 
-
+    
+    
+    

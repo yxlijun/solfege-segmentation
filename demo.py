@@ -27,6 +27,7 @@ def _main(wav_file,input_json,output_json,mode):
 	mfshs = MFSHS(data_wav)
 	mfshs.frame()
 	pitches = mfshs.pitches
+	zeroAmploc = mfshs.zeroAmploc
 	#frequency = np.array(pitchResult['frequency'])
 
 	log_mel_old = get_log_mel_madmom(wav_file, fs=fs_wav, hopsize_t=hopsize_t, channel=1)
@@ -47,7 +48,7 @@ def _main(wav_file,input_json,output_json,mode):
 	result_loc_info = sw_alignment(score_note,Note_and_onset['notes'])
 
 	#result_info = saveJson(filename_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,mode)
-	result_info,paddingzero_frame = post_proprocess(output_json,pitches,resultOnset['onset_frame'],score_note,pauseLoc,result_loc_info,mode)
+	post_proprocess(output_json,pitches,resultOnset['onset_frame'],zeroAmploc,score_note,pauseLoc,result_loc_info,mode)
 
 
 if __name__=='__main__':

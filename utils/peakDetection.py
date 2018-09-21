@@ -49,7 +49,7 @@ def findPeak(obs_syllable,pitches,score_note,est_file=None):
 	if len(peak.keys())<2:
 		result_info = {'onset_frame':[],'onset_time':[]}
 		return result_info
-	print peak
+	#print peak
 	onset_1 = []
 	if est_file is not None:
 		with open(est_file,'r') as f:
